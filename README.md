@@ -29,6 +29,7 @@ It runs in the browser, works offline once loaded, and installs to the home scre
 **Files**
 - Projects autosave on the device. Open, duplicate and delete them from Projects.
 - Export a plan image (PNG), a CAD drawing (DXF for AutoCAD, Revit, SketchUp or LibreCAD), a vector drawing (SVG at 1:100), a 3D image (PNG), 3D models (GLB and OBJ) and the project file (JSON) for backup.
+- **Copy project** (in Export) and **Paste project** (in Projects) move a plan between devices as text, with no file needed.
 
 ## Use it on the Galaxy Tab S7+
 

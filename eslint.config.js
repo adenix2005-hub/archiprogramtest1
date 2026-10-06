@@ -10,7 +10,7 @@ export default [
         localStorage: 'readonly', performance: 'readonly', requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly',
         setInterval: 'readonly', clearInterval: 'readonly', getComputedStyle: 'readonly',
-        ResizeObserver: 'readonly', matchMedia: 'readonly', Blob: 'readonly', URL: 'readonly',
+        ResizeObserver: 'readonly', MutationObserver: 'readonly', matchMedia: 'readonly', Blob: 'readonly', URL: 'readonly',
         FileReader: 'readonly', Image: 'readonly', HTMLElement: 'readonly', KeyboardEvent: 'readonly',
         PointerEvent: 'readonly', DOMParser: 'readonly', structuredClone: 'readonly', self: 'readonly',
         Node: 'readonly', Event: 'readonly', CustomEvent: 'readonly', XMLSerializer: 'readonly', btoa: 'readonly', atob: 'readonly',

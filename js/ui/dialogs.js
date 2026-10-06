@@ -197,6 +197,7 @@ export class Dialogs {
         h('button', { type: 'button', class: 'btn btn-primary', onclick: () => { app.openDocument(newDoc('Untitled plan')); entry.close(); app.toast('New blank plan. Pick Sketch or Wall to start drawing.'); } }, h('span', { html: icon('plus') }), h('span', { text: 'New blank plan' })),
         h('button', { type: 'button', class: 'btn', onclick: () => { app.openDocument(sampleHouse()); entry.close(); } }, h('span', { html: icon('home') }), h('span', { text: 'New from sample house' })),
         h('button', { type: 'button', class: 'btn', onclick: () => fileInput.click() }, h('span', { html: icon('import') }), h('span', { text: 'Open file…' })),
+        h('button', { type: 'button', class: 'btn', onclick: () => this.pasteProject(() => entry.close()) }, h('span', { html: icon('copy') }), h('span', { text: 'Paste project…' })),
         fileInput,
       ),
       h('h3', { class: 'vsect-title', text: 'On this device' }),
@@ -209,8 +210,14 @@ export class Dialogs {
 
   exportDialog() {
     const app = this.app;
+    // Embedded previews (claude.ai artifacts) cannot save files; copying text still works.
+    const preview = !!window.__LINTEL_PREVIEW__;
     let entry;
     const run = async (fn, label) => {
+      if (preview) {
+        app.toast('Saving files is blocked in this preview. Use Copy project, or export from the installed app.', 6000);
+        return;
+      }
       try {
         await fn();
         app.toast(`${label} exported`);
@@ -219,10 +226,11 @@ export class Dialogs {
         app.toast(`Export failed: ${err.message || err}`);
       }
     };
-    const item = (iconName, title, desc, fn) =>
-      h('button', { type: 'button', class: 'exp-item', onclick: () => run(fn, title) }, h('span', { class: 'exp-ic', html: icon(iconName) }), h('span', { class: 'exp-text' }, h('strong', { text: title }), h('span', { text: desc })));
+    const button = (iconName, title, desc, onclick) =>
+      h('button', { type: 'button', class: 'exp-item', onclick }, h('span', { class: 'exp-ic', html: icon(iconName) }), h('span', { class: 'exp-text' }, h('strong', { text: title }), h('span', { text: desc })));
+    const item = (iconName, title, desc, fn) => button(iconName, title, desc, () => run(fn, title));
     const name = safeName(app.model.doc.name);
-    const body = h(
+    const grid = h(
       'div',
       { class: 'exp-grid' },
       item('plan', 'Plan image (PNG)', `${app.level.name} on a white sheet`, async () => {
@@ -251,9 +259,64 @@ export class Dialogs {
         downloadBlob(blob, `${name}.obj`);
       }),
       item('save', 'Project file (JSON)', 'Full backup you can open here again', () => exportJSON(app)),
+      button('copy', 'Copy project', 'As text, to paste into Lintel on another device', () => this.copyProject()),
     );
+    const body = preview
+      ? h('div', { class: 'dlg-stack' }, h('p', { class: 'f-note', text: 'This preview cannot save files. Copy project still works, so you can paste this plan into the installed app.' }), grid)
+      : grid;
     entry = this.open({ title: 'Export', body, wide: true });
     void entry;
+  }
+
+  /** Copies the project as text, to move it to another device or out of a preview. */
+  copyProject() {
+    const app = this.app;
+    const text = JSON.stringify(app.model.doc);
+    const showText = () => {
+      const area = h('textarea', { class: 'f-input text-area', readonly: true, rows: 6, 'aria-label': 'Project text' });
+      area.value = text;
+      this.open({
+        title: 'Copy project',
+        body: h('div', { class: 'dlg-stack' }, h('p', { class: 'f-note', text: 'Select all of this text and copy it. Then, in Lintel on the other device, open Projects and choose Paste project.' }), area),
+        actions: [{ label: 'Done', primary: true }],
+      });
+      setTimeout(() => {
+        area.focus();
+        area.select();
+      }, 60);
+    };
+    if (!navigator.clipboard?.writeText) return showText();
+    navigator.clipboard.writeText(text).then(
+      () => app.toast('Project copied. In Lintel on the other device, open Projects and choose Paste project.', 6000),
+      showText,
+    );
+  }
+
+  /** Opens a project pasted as text (see Copy project). */
+  pasteProject(onDone) {
+    const app = this.app;
+    const area = h('textarea', { class: 'f-input text-area', rows: 6, placeholder: 'Paste the project text here', spellcheck: 'false', autocomplete: 'off', 'aria-label': 'Project text' });
+    const open = (close) => {
+      let doc;
+      try {
+        const data = JSON.parse(area.value.trim());
+        if (!Array.isArray(data?.walls)) throw new Error('not a project');
+        doc = migrate(data);
+      } catch {
+        app.toast('That text is not a Lintel project. In Lintel, open Export and choose Copy project.');
+        return;
+      }
+      close();
+      onDone?.();
+      app.openDocument(doc);
+      app.toast(`Opened "${doc.name}"`);
+    };
+    this.open({
+      title: 'Paste project',
+      body: h('div', { class: 'dlg-stack' }, h('p', { class: 'f-note', text: 'In Lintel on the other device, open Export and choose Copy project. Then paste the text here.' }), area),
+      actions: [{ label: 'Cancel' }, { label: 'Open', primary: true, run: open }],
+    });
+    setTimeout(() => area.focus(), 60);
   }
 
   /* ---------- settings ---------- */

@@ -92,6 +92,7 @@ export class App extends Emitter {
 
   init(root) {
     this.root = root;
+    this.watchHostTheme();
     this.applyTheme();
     this.ui = new UI(this, root);
     this.plan = new PlanView(this, this.ui.planHost);
@@ -145,7 +146,7 @@ export class App extends Emitter {
     this.refreshTool();
     this.ui.onModelChange({ type: 'load' });
     if (!storage.storageAvailable()) {
-      this.ui.toast('This browser is not keeping data. Export your plan to keep it.', 6000);
+      this.ui.toast(window.__LINTEL_PREVIEW__ ? 'This page is not keeping data. Use Export, then Copy project, to keep your plan.' : 'This browser is not keeping data. Export your plan to keep it.', 6000);
     } else if (this.firstRun) {
       this.saveNow();
       storage.setCurrentId(this.projectId);
@@ -188,15 +189,33 @@ export class App extends Emitter {
 
   get effectiveTheme() {
     if (this.prefs.theme === 'light' || this.prefs.theme === 'dark') return this.prefs.theme;
+    if (this.hostTheme === 'light' || this.hostTheme === 'dark') return this.hostTheme;
     return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
   applyTheme() {
     const el = document.documentElement;
-    if (this.prefs.theme === 'auto') el.removeAttribute('data-theme');
-    else el.setAttribute('data-theme', this.prefs.theme);
+    const theme = this.prefs.theme === 'auto' ? this.hostTheme : this.prefs.theme;
+    if (theme) el.setAttribute('data-theme', theme);
+    else el.removeAttribute('data-theme');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', this.effectiveTheme === 'dark' ? '#0b1d33' : '#e8ecea');
+  }
+
+  /**
+   * A page that embeds the app (such as the claude.ai artifact viewer) may set
+   * data-theme on the root element itself. "Follow system" then follows that choice.
+   */
+  watchHostTheme() {
+    const el = document.documentElement;
+    this.hostTheme = el.getAttribute('data-theme');
+    if (typeof MutationObserver !== 'function') return;
+    new MutationObserver(() => {
+      const theme = el.getAttribute('data-theme');
+      if (theme === (this.prefs.theme === 'auto' ? this.hostTheme : this.prefs.theme)) return;
+      this.hostTheme = theme;
+      this.onThemeChanged();
+    }).observe(el, { attributes: true, attributeFilter: ['data-theme'] });
   }
 
   onThemeChanged() {

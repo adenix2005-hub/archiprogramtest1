@@ -3,6 +3,8 @@
 //
 //   node tools/build.mjs            regenerate sw.js and the single-file builds in dist/
 //   node tools/build.mjs --vendor   also rebuild vendor/three.module.min.js from node_modules
+//   node tools/build.mjs --artifact also build dist/artifact.html, a preview page for claude.ai
+//                                   artifacts that loads three.js from jsDelivr
 //
 // The app itself needs no build step: index.html loads the ES modules directly.
 // dist/lintel.html is a self-contained copy that runs offline from a single file.
@@ -15,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = new Set(process.argv.slice(2));
 const THREE_VERSION = '0.186.1';
+const THREE_URL = `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`;
 
 async function loadEsbuild() {
   try {
@@ -134,14 +137,18 @@ async function bundleApp(esbuild, { cdnThree = false } = {}) {
     plugins.push({
       name: 'three-cdn',
       setup(build) {
+        // js/three/lib.js re-exports the vendored bundle; swap it for three.js from jsDelivr.
         build.onResolve({ filter: /^\.\/lib\.js$/ }, (a) =>
           /[\\/]js[\\/]three[\\/]/.test(a.importer) ? { path: 'three-lib', namespace: 'virtual' } : undefined,
         );
         build.onLoad({ filter: /^three-lib$/, namespace: 'virtual' }, () => ({
-          contents: "export * from 'three';\nexport { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';\n",
+          contents: "export * from 'three';\nexport { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';\n",
           loader: 'js',
+          resolveDir: ROOT,
         }));
-        build.onResolve({ filter: /^three(\/.*)?$/ }, (a) => ({ path: a.path, external: true }));
+        // The exporter is bundled from node_modules. three itself is imported by full URL,
+        // so the page needs no import map.
+        build.onResolve({ filter: /^three$/ }, () => ({ path: THREE_URL, external: true }));
       },
     });
   }
@@ -184,22 +191,23 @@ ${SPLASH}
   console.log(`dist/lintel.html: ${(html.length / 1024).toFixed(0)} KB`);
 }
 
-/** Page content for a claude.ai artifact (no html/head/body; three.js from jsDelivr). */
+/** Page content for a claude.ai artifact preview (no html/head/body; three.js from jsDelivr). */
 async function buildArtifact(esbuild) {
   mkdirSync(join(ROOT, 'dist'), { recursive: true });
   const css = fontCss() + '\n' + readFileSync(join(ROOT, 'css', 'app.css'), 'utf8');
   const js = await bundleApp(esbuild, { cdnThree: true });
-  const importMap = {
-    imports: {
-      three: `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/build/three.module.js`,
-      'three/addons/': `https://cdn.jsdelivr.net/npm/three@${THREE_VERSION}/examples/jsm/`,
-    },
-  };
+  // The splash text changes if the app has not started after a while (three.js comes from the CDN).
   const page = `<title>Lintel Plan Studio</title>
 <style>${css}</style>
 ${SPLASH}
-<script>window.__LINTEL_NO_SW__ = true;</script>
-<script type="importmap">${JSON.stringify(importMap)}</script>
+<script>
+window.__LINTEL_NO_SW__ = true;
+window.__LINTEL_PREVIEW__ = true;
+setTimeout(function () {
+  var s = !window.lintel && document.querySelector('.splash span');
+  if (s) s.textContent = 'Still loading. Check the internet connection, then reload.';
+}, 15000);
+</script>
 <script type="module">${js}</script>
 `;
   writeFileSync(join(ROOT, 'dist', 'artifact.html'), page);

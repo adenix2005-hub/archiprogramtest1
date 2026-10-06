@@ -1604,6 +1604,22 @@ select.f-input {
   gap: 8px;
 }
 
+.dlg-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.f-input.text-area {
+  height: auto;
+  min-height: 132px;
+  padding: 8px 10px;
+  font: 12px/1.45 var(--font-mono);
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+  word-break: break-all;
+}
+
 .exp-item {
   display: flex;
   gap: 12px;
