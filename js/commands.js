@@ -25,7 +25,7 @@ export const COMMANDS = [
   { id: 'section', label: 'Section', icon: 'section', group: 'annotate', keys: ['X'], aliases: ['section', 'se', 'cut'], tool: 'section' },
   { id: 'camera', label: 'Camera', icon: 'camera', group: 'annotate', keys: ['C'], aliases: ['camera', 'cam', 'viewpoint'], tool: 'camera' },
   // Modify
-  { id: 'erase', label: 'Erase', icon: 'erase', group: 'modify', keys: ['E'], aliases: ['erase', 'e', 'del'], tool: 'erase' },
+  { id: 'erase', label: 'Erase', icon: 'erase', group: 'modify', keys: ['E'], aliases: ['erase', 'e', 'eraser'], tool: 'erase' },
   { id: 'move', label: 'Move', icon: 'move', group: 'modify', keys: ['M'], aliases: ['move', 'm', 'mv'], tool: 'move' },
   { id: 'copy', label: 'Copy', icon: 'copy', group: 'modify', keys: ['Shift+C'], aliases: ['copy', 'co', 'cp', 'cc'], tool: 'copy' },
   { id: 'rotate', label: 'Rotate', icon: 'rotate', group: 'modify', keys: ['Q'], aliases: ['rotate', 'ro'], tool: 'rotate' },
@@ -57,7 +57,7 @@ export const COMMANDS = [
   // Edit
   { id: 'undo', label: 'Undo', icon: 'undo', group: 'edit', keys: ['Ctrl+Z'], aliases: ['undo', 'u'], run: (app) => app.undo() },
   { id: 'redo', label: 'Redo', icon: 'redo', group: 'edit', keys: ['Ctrl+Y', 'Ctrl+Shift+Z'], aliases: ['redo', 're'], run: (app) => app.redo() },
-  { id: 'delete', label: 'Delete selection', icon: 'trash', group: 'edit', keys: ['Delete', 'Backspace'], aliases: ['delete', 'erase!'], run: (app) => app.deleteSelection() },
+  { id: 'delete', label: 'Delete selection', icon: 'trash', group: 'edit', keys: ['Delete', 'Backspace'], aliases: ['delete', 'del'], run: (app) => app.deleteSelection() },
   { id: 'selectAll', label: 'Select all', icon: 'select', group: 'edit', keys: ['Ctrl+A'], aliases: ['all', 'selectall'], run: (app) => app.selectAll() },
   { id: 'clipCopy', label: 'Copy to clipboard', icon: 'copy', group: 'edit', keys: ['Ctrl+C'], aliases: [], run: (app) => app.clipboardCopy() },
   { id: 'clipCut', label: 'Cut', icon: 'copy', group: 'edit', keys: ['Ctrl+X'], aliases: ['cut'], run: (app) => app.clipboardCopy(true) },
@@ -72,7 +72,7 @@ export const COMMANDS = [
   { id: 'projects', label: 'Projects', icon: 'folder', group: 'file', keys: ['Ctrl+O'], aliases: ['open', 'projects', 'new'], run: (app) => app.ui.dialogs.projects() },
   { id: 'save', label: 'Save', icon: 'save', group: 'file', keys: ['Ctrl+S'], aliases: ['save', 'qsave'], run: (app) => app.saveNow(true) },
   { id: 'export', label: 'Export', icon: 'export', group: 'file', keys: ['Ctrl+E', 'Ctrl+Shift+S'], aliases: ['export', 'dxf', 'png', 'glb', 'saveas'], run: (app) => app.ui.dialogs.exportDialog() },
-  { id: 'settings', label: 'Settings', icon: 'settings', group: 'file', keys: ['Ctrl+,'], aliases: ['settings', 'options', 'op!', 'units', 'prefs'], run: (app) => app.ui.dialogs.settings() },
+  { id: 'settings', label: 'Settings', icon: 'settings', group: 'file', keys: ['Ctrl+,'], aliases: ['settings', 'options', 'units', 'prefs'], run: (app) => app.ui.dialogs.settings() },
   { id: 'help', label: 'Shortcuts & help', icon: 'help', group: 'file', keys: ['F1', '?'], aliases: ['help', 'keys', 'shortcuts', '?'], run: (app) => app.ui.dialogs.help() },
   { id: 'theme', label: 'Switch theme', icon: 'theme', group: 'file', keys: [], aliases: ['theme', 'dark', 'light', 'blueprint'], run: (app) => app.cycleTheme() },
 ];

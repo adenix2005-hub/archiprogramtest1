@@ -441,8 +441,10 @@ export class MirrorTool extends SelectionTool {
     }
     if (dist(p, this.a) < 10) return;
     let ids = [...this.app.selection];
-    if (this.app.toolOptions.mirror.keep) ids = duplicate(this.model, ids, { x: 0, y: 0 });
-    const ctx = beginTransform(this.doc, ids);
+    const keep = this.app.toolOptions.mirror.keep;
+    if (keep) ids = duplicate(this.model, ids, { x: 0, y: 0 });
+    // Copies sit on top of the originals; don't let the originals stretch with them.
+    const ctx = beginTransform(this.doc, ids, { attach: !keep });
     applyMirror(this.doc, ctx, this.a, p);
     this.model.commit('Mirror');
     this.app.select(ids);

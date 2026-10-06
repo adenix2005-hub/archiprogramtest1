@@ -80,8 +80,10 @@ export class SelectTool extends Tool {
         const half = w.thickness / 2;
         const s0 = el.pos - el.width / 2, s1 = el.pos + el.width / 2;
         const sig = (el.swing ?? 1) >= 0 ? 1 : -1;
-        H.push({ key: 'w0', p: path.offsetAt(s0, 0), shape: 'circle', o: el });
-        H.push({ key: 'w1', p: path.offsetAt(s1, 0), shape: 'circle', o: el });
+        if (el.width * vp.scale >= 46) {
+          H.push({ key: 'w0', p: path.offsetAt(s0, 0), shape: 'circle', o: el });
+          H.push({ key: 'w1', p: path.offsetAt(s1, 0), shape: 'circle', o: el });
+        }
         if (el.kind === 'door') {
           H.push({ key: 'swing', p: path.offsetAt(el.pos, sig * (half + vp.px(24))), shape: 'flip', o: el, tap: () => this.flipOpening(el, 'swing') });
           if ((el.style || 'single') === 'single' || el.style === 'pocket') {
@@ -152,9 +154,14 @@ export class SelectTool extends Tool {
   }
 
   pillAt(e) {
+    const pad = e.isTouch ? 8 : 3;
     for (const p of this.pills) {
-      const pad = e.isTouch ? 8 : 3;
-      if (e.sx >= p.rect.x - pad && e.sx <= p.rect.x + p.rect.w + pad && e.sy >= p.rect.y - pad && e.sy <= p.rect.y + p.rect.h + pad) return p;
+      const r = p.rect;
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+      const a = -(r.angle || 0);
+      const dx = e.sx - cx, dy = e.sy - cy;
+      const lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a);
+      if (Math.abs(lx) <= r.w / 2 + pad && Math.abs(ly) <= r.h / 2 + pad) return p;
     }
     return null;
   }
@@ -167,14 +174,14 @@ export class SelectTool extends Tool {
   /* ---------- pointer ---------- */
 
   onPointerDown(e) {
-    const pill = this.pillAt(e);
-    if (pill) {
-      this.press = { pill, sx: e.sx, sy: e.sy };
-      return;
-    }
     const handle = this.handleAt(e);
     if (handle) {
       this.press = { handle, sx: e.sx, sy: e.sy, world: e.world };
+      return;
+    }
+    const pill = this.pillAt(e);
+    if (pill) {
+      this.press = { pill, sx: e.sx, sy: e.sy };
       return;
     }
     const hit = hitTest(this.app, e.world, this.tol(e));
@@ -551,9 +558,14 @@ export class SelectTool extends Tool {
       const g = app.derived.wallGeom(el);
       if (!g) return;
       const L = g.path.length;
-      const m = g.path.offsetAt(L / 2, -(g.half + vp.px(26)) * ((el.bulge || 0) < 0 ? -1 : 1));
+      const side = (el.bulge || 0) < 0 ? 1 : -1;
+      const m = g.path.offsetAt(L / 2, side * (g.half + vp.px(20)));
       const P = vp.w2s(m);
-      const rect = view.drawPill(ctx, this.fmt(L), P.x, P.y);
+      const t = g.path.tangentAt(L / 2);
+      let ang = Math.atan2(-t.y, t.x);
+      if (ang > Math.PI / 2) ang -= Math.PI;
+      if (ang < -Math.PI / 2) ang += Math.PI;
+      const rect = view.drawPill(ctx, this.fmt(L), P.x, P.y, { angle: ang });
       this.pills.push({
         rect,
         edit: () =>

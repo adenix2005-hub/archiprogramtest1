@@ -51,7 +51,7 @@ export class Snapper {
     const doc = model.doc;
     for (const r of doc.roofs) {
       if (r.level !== levelId) continue;
-      for (const p of r.points) pts.push({ p, kind: 'end', id: r.id });
+      for (const p of r.points) pts.push({ p, kind: 'end', id: r.id, noAlign: true });
     }
     for (const d of doc.dims) {
       if (d.level !== levelId) continue;
@@ -130,7 +130,7 @@ export class Snapper {
       let bx = null, by = null, bdx = tol, bdy = tol;
       const view = vp.visibleBounds(50);
       for (const c of this.points(levelId)) {
-        if (c.kind === 'corner' || c.kind === 'center' || isExcluded(c)) continue;
+        if (c.kind === 'corner' || c.kind === 'center' || c.noAlign || isExcluded(c)) continue;
         if (c.p.x < view.minX || c.p.x > view.maxX || c.p.y < view.minY || c.p.y > view.maxY) continue;
         const dx = Math.abs(q.x - c.p.x), dy = Math.abs(q.y - c.p.y);
         if (dx < bdx && dist(c.p, q) > tol) {

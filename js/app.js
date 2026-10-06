@@ -511,10 +511,18 @@ export class App extends Emitter {
     const lv = { id, name: n === 1 ? 'First floor' : `Level ${n}`, elevation: top.elevation + top.height + slab, height: top.height };
     doc.levels.push(lv);
     if (copyWalls) {
-      const ext = doc.walls.filter((w) => w.level === top.id);
-      const ids = duplicate(this.model, ext.map((w) => w.id), { x: 0, y: 0 }, id);
-      // keep only the walls; openings copied with them are fine as a start
-      void ids;
+      const below = this.derived.level(top.id);
+      const outer = new Set(below.outlines.flatMap((o) => o.walls.map((w) => w.id)));
+      const walls = doc.walls.filter((w) => w.level === top.id);
+      const out = {};
+      duplicate(this.model, walls.map((w) => w.id), { x: 0, y: 0 }, id, out);
+      // Upstairs gets the windows and inside doors, but not the outside doors.
+      const outerCopies = new Set([...out.wallMap].filter(([src]) => outer.has(src)).map(([, copy]) => copy));
+      doc.openings = doc.openings.filter((o) => !(outerCopies.has(o.wall) && o.kind !== 'window'));
+      // Keep room names and colours.
+      for (const t of doc.rooms.filter((r) => r.level === top.id)) {
+        doc.rooms.push({ ...t, id: this.model.nextId('rooms'), level: id });
+      }
     }
     // Roofs on the level below move up to the new top level.
     for (const r of doc.roofs) if (r.level === top.id) r.level = id;

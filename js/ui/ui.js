@@ -43,6 +43,13 @@ const TOGGLES = [
 
 const VALUE_RE = /^[\s\d.\-+@<(,'"]/;
 
+/** True when typed text is a value for the active tool rather than a command. */
+function isValueText(app, text) {
+  if (!app.tool.inputLabel) return false;
+  if (VALUE_RE.test(text)) return true;
+  return /radius/i.test(app.tool.inputLabel) && /^r\s*=?\s*[\d.]/i.test(text.trim());
+}
+
 export class UI {
   constructor(app, root) {
     this.app = app;
@@ -612,8 +619,9 @@ export class UI {
     const input = h('input', { class: 'inline-edit', type: 'text', value, inputmode: isMetric(this.app.units) ? 'decimal' : 'text', autocomplete: 'off', enterkeyhint: 'done', 'aria-label': 'Exact value' });
     const host = this.planPane;
     const pr = this.planHost.getBoundingClientRect(), hr = host.getBoundingClientRect();
-    input.style.left = `${rect.x + pr.left - hr.left - 10}px`;
-    input.style.top = `${rect.y + pr.top - hr.top - 4}px`;
+    const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+    input.style.left = `${cx + pr.left - hr.left - Math.max(90, rect.w + 20) / 2}px`;
+    input.style.top = `${cy + pr.top - hr.top - 15}px`;
     input.style.minWidth = `${Math.max(90, rect.w + 20)}px`;
     host.append(input);
     this.inline = input;
@@ -657,7 +665,7 @@ export class UI {
     const renderSuggest = () => {
       const text = input.value;
       const app = this.app;
-      if (!text.trim() || (app.tool.inputLabel && VALUE_RE.test(text))) {
+      if (!text.trim() || isValueText(app, text)) {
         this.cmdSuggest.hidden = true;
         items = [];
         return;
@@ -702,7 +710,7 @@ export class UI {
         return;
       }
       const isEnter = e.key === 'Enter' || e.key === 'Tab';
-      const isSpaceCmd = e.key === ' ' && items.length && !VALUE_RE.test(input.value) && searchCommands(input.value)[0]?.aliases.includes(input.value.trim().toLowerCase());
+      const isSpaceCmd = e.key === ' ' && items.length && !isValueText(this.app, input.value) && searchCommands(input.value)[0]?.aliases.includes(input.value.trim().toLowerCase());
       if (isEnter || isSpaceCmd) {
         e.preventDefault();
         this.submitCmd(items[sel]);
@@ -722,7 +730,7 @@ export class UI {
       if (app.tool.busy) app.tool.finish();
       return;
     }
-    if (app.tool.inputLabel && VALUE_RE.test(text)) {
+    if (isValueText(app, text)) {
       const ok = app.tool.onInput(text);
       if (!ok) app.toast(`Could not read "${text}" as ${app.tool.inputLabel.toLowerCase()}`);
       app.plan.invalidateOverlay();
@@ -770,7 +778,7 @@ export class UI {
   /** Text being typed as a value (shown next to the cursor). */
   get typedValue() {
     const v = this.cmdInput.value;
-    return document.activeElement === this.cmdInput && this.app.tool.inputLabel && VALUE_RE.test(v) ? v : '';
+    return document.activeElement === this.cmdInput && isValueText(this.app, v) ? v : '';
   }
 
   /* ---------- keyboard ---------- */

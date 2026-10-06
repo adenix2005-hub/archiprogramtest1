@@ -399,6 +399,14 @@ export class ArcWallTool extends Tool {
     this.app.refreshTool();
   }
 
+  onKey(e) {
+    if (this.a && this.b && (e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+      this.app.ui.focusCmd('r', true);
+      return true;
+    }
+    return false;
+  }
+
   onInput(text) {
     if (this.a && !this.b) {
       const dir = this.cursor && dist(this.cursor, this.a) > 1 ? sub(this.cursor, this.a) : null;

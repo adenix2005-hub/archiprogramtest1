@@ -4,7 +4,7 @@
   "private": true,
   "description": "Floor plan sketching and 3D modelling for tablets, pens, mice and keyboards. Runs in the browser and installs as an app.",
   "type": "module",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "scripts": {
     "start": "npx http-server -c-1 -p 8080 .",
     "test": "node --test tests/*.test.mjs",

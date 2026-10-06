@@ -85,7 +85,7 @@ const translatePt = (p, d) => ({ x: p.x + d.x, y: p.y + d.y });
  * Prepare a transform (move / rotate / mirror) of the given elements.
  * Captures original geometry so that apply* can be called repeatedly while dragging.
  */
-export function beginTransform(doc, ids) {
+export function beginTransform(doc, ids, { attach = true } = {}) {
   const sel = new Set(ids);
   const orig = new Map();
   const all = [];
@@ -101,7 +101,7 @@ export function beginTransform(doc, ids) {
   const wallSet = new Set(walls.map((w) => w.id));
   const stretch = [];
   const seen = new Set();
-  for (const w of walls) {
+  for (const w of attach ? walls : []) {
     for (const which of ['a', 'b']) {
       for (const att of wallEndsAt(doc, w.level, w[which])) {
         if (wallSet.has(att.wall.id)) continue;
@@ -113,7 +113,7 @@ export function beginTransform(doc, ids) {
     }
   }
   const tees = [];
-  for (const w of walls) {
+  for (const w of attach ? walls : []) {
     for (const t of teeWallsOn(doc, w)) {
       if (wallSet.has(t.wall.id)) continue;
       const key = t.wall.id + t.which;
@@ -146,8 +146,14 @@ function updateNeighbours(doc, ctx, mapPoint) {
   restoreOpenings(doc, ctx.openingRecs);
 }
 
+const clean = (v) => Math.round(v * 1e6) / 1e6;
+
 /** Apply a generic point mapping to the selection (used by move/rotate/mirror). */
-function applyMapping(doc, ctx, mapPoint, { mirror = false, angle = 0 } = {}) {
+function applyMapping(doc, ctx, map, { mirror = false, angle = 0 } = {}) {
+  const mapPoint = (p) => {
+    const q = map(p);
+    return { x: clean(q.x), y: clean(q.y) };
+  };
   for (const { c, el } of ctx.all) {
     const o = ctx.orig.get(el.id);
     switch (c) {
@@ -224,7 +230,7 @@ export function applyMirror(doc, ctx, a, b) {
  * Duplicate elements (walls bring their openings). Returns the new ids.
  * The copies are placed with the given offset.
  */
-export function duplicate(model, ids, delta = { x: 0, y: 0 }, levelId = null) {
+export function duplicate(model, ids, delta = { x: 0, y: 0 }, levelId = null, out = null) {
   const doc = model.doc;
   const sel = new Set(ids);
   const newIds = [];
@@ -268,6 +274,7 @@ export function duplicate(model, ids, delta = { x: 0, y: 0 }, levelId = null) {
     }
   }
   model.version++;
+  if (out) out.wallMap = wallMap;
   return newIds;
 }
 

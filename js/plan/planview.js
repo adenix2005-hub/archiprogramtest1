@@ -279,7 +279,7 @@ export class PlanView {
     ctx.textBaseline = 'middle';
     ctx.fillText(text, 0, 0.5);
     ctx.restore();
-    return { x: sx - w / 2, y: sy - h / 2, w, h };
+    return { x: sx - w / 2, y: sy - h / 2, w, h, angle };
   }
 
   /** Preview a wall (outline) in the overlay. */

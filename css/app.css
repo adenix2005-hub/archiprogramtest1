@@ -648,7 +648,8 @@ textarea {
 .zoom-ctrls {
   position: absolute;
   right: 10px;
-  bottom: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -671,7 +672,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: var(--shadow);
-  max-width: calc(100% - 90px);
+  max-width: calc(100% - 24px);
   overflow-x: auto;
   scrollbar-width: none;
 }

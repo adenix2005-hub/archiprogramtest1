@@ -250,8 +250,9 @@ export function exportSVG(app) {
   const d = (pts, closed) => pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.x)} ${Y(p.y)}`).join('') + (closed ? 'Z' : '');
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const parts = [];
-  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(0)} ${hh.toFixed(0)}" width="${(w / 10).toFixed(0)}mm" height="${(hh / 10).toFixed(0)}mm">`);
-  parts.push('<desc>Floor plan at 1:10 of the stated size. Units: millimetres.</desc>');
+  // Printed size is 1:100 (1 mm on paper = 100 mm in the building).
+  parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w.toFixed(0)} ${hh.toFixed(0)}" width="${(w / 100).toFixed(1)}mm" height="${(hh / 100).toFixed(1)}mm">`);
+  parts.push(`<title>${esc(app.model.doc.name)} · ${esc(app.level.name)}</title><desc>Floor plan, scale 1:100 when printed at the stated size. Drawing units are millimetres.</desc>`);
   parts.push('<rect width="100%" height="100%" fill="#fff"/>');
   parts.push(`<g fill="#d9d2c3" fill-opacity=".35" stroke="none">${P.rooms.map((p) => `<path d="${d(p, true)}"/>`).join('')}</g>`);
   parts.push(`<g fill="#3a3f44" stroke="#121518" stroke-width="12" stroke-linejoin="miter">${P.walls.map((p) => `<path d="${d(p, true)}"/>`).join('')}</g>`);
@@ -282,6 +283,7 @@ export function exportSVG(app) {
   });
   parts.push(`<g fill="none" stroke="#33424a" stroke-width="6" font-family="Barlow Semi Condensed, Arial Narrow, sans-serif">${dims.join('')}</g>`);
   parts.push(`<g font-family="Barlow, Arial, sans-serif" fill="#1d2427" text-anchor="middle">${P.texts.map((t) => `<text x="${X(t.x)}" y="${Y(t.y)}" font-size="${t.size}" dominant-baseline="middle"${t.angle ? ` transform="rotate(${-t.angle} ${X(t.x)} ${Y(t.y)})"` : ''}>${esc(t.text)}</text>`).join('')}</g>`);
+  parts.push(`<text x="${(m / 2).toFixed(0)}" y="${(hh - m / 3).toFixed(0)}" font-family="Barlow, Arial, sans-serif" font-size="320" fill="#1d2427">${esc(app.model.doc.name)} · ${esc(app.level.name)} · 1:100</text>`);
   parts.push('</svg>');
   downloadBlob(new Blob([parts.join('\n')], { type: 'image/svg+xml' }), `${safeName(app.model.doc.name)}-${safeName(app.level.name)}.svg`);
 }

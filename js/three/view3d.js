@@ -326,7 +326,7 @@ export class View3D {
     this.grid.material.depthWrite = false;
     this.grid.position.set(Math.round(c.x), -0.01, Math.round(c.z));
     this.scene.add(this.grid);
-    // Sun from the north-west in plan terms is unusual; use a pleasant late-morning light from the south-east.
+    // Late-morning sun from the south-east of the plan.
     const r = Math.max(size.length(), 10);
     this.sun.position.set(c.x + r * 0.55, c.y + r * 0.9, c.z + r * 0.75);
     this.sun.target.position.copy(c);
@@ -530,7 +530,9 @@ export class View3D {
     const fov = (this.persp.fov * Math.PI) / 180;
     const aspect = this.persp.aspect || 1;
     const f = Math.min(fov, 2 * Math.atan(Math.tan(fov / 2) * aspect));
-    return Math.max(3, (s.radius / Math.sin(f / 2)) * 0.82);
+    // The bounding sphere is generous vertically (houses are flat), so wide panes can sit closer.
+    const k = aspect >= 1.2 ? 0.88 : aspect >= 0.8 ? 0.98 : 1.1;
+    return Math.max(3, (s.radius / Math.sin(f / 2)) * k);
   }
 
   fit(animate = true) {
@@ -606,6 +608,7 @@ export class View3D {
   }
 
   onDown(e) {
+    this.userAdjusted = true;
     this.app.setFocusView('3d');
     this.canvas.focus({ preventScroll: true });
     const L = this.local(e);
@@ -679,6 +682,7 @@ export class View3D {
 
   onWheel(e) {
     e.preventDefault();
+    this.userAdjusted = true;
     const L = this.local(e);
     let dy = e.deltaY;
     if (e.deltaMode === 1) dy *= 32;
@@ -801,6 +805,8 @@ export class View3D {
     this.persp.aspect = w / hgt;
     this.persp.updateProjectionMatrix();
     this.updateOrthoFrustum();
+    // Until the user moves the camera, keep the whole model framed as the pane changes size.
+    if (!this.userAdjusted && this.mode === 'orbit' && this.viewDef.type === 'model' && this.model) this.fit(false);
     this.requestRender();
   }
 
