@@ -1,0 +1,20 @@
+{
+  "name": "lintel-plan-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Floor plan sketching and 3D modelling for tablets, pens, mice and keyboards. Runs in the browser and installs as an app.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "start": "npx http-server -c-1 -p 8080 .",
+    "test": "node --test tests/*.test.mjs",
+    "lint": "eslint js tests tools",
+    "build": "node tools/build.mjs",
+    "build:vendor": "node tools/build.mjs --vendor",
+    "build:artifact": "node tools/build.mjs --artifact"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "0.186.1"
+  }
+}
