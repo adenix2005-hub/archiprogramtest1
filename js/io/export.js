@@ -5,12 +5,18 @@ import { renderPlan, drawOpening, dimGeometry } from '../plan/render.js';
 import { lightTheme } from '../plan/theme.js';
 import { formatLength, formatArea } from '../core/units.js';
 import { dist } from '../core/vec.js';
+import { zipFiles } from './zip.js';
 
 export function safeName(name) {
   return (name || 'plan').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() || 'plan';
 }
 
-export function downloadBlob(blob, filename) {
+/**
+ * Saves a file. Resolves true once it is handed to the browser, or false when the
+ * viewer declines the save in a preview.
+ */
+export async function downloadBlob(blob, filename) {
+  if (window.__LINTEL_PREVIEW__) return previewSave(blob, filename);
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -20,12 +26,60 @@ export function downloadBlob(blob, filename) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return true;
+}
+
+/* ---------- saving inside a claude.ai artifact preview ---------- */
+
+// The artifact viewer saves files through its "downloads" capability, after the
+// viewer confirms, and only for common file types. Other files go inside a ZIP.
+const PREVIEW_TYPES = /\.(png|jpe?g|gif|webp|svg|json|txt|md|csv|pdf|zip)$/i;
+let previewDownloads = null;
+let previewState = 'unknown';
+
+function previewSaver() {
+  previewDownloads ??= Promise.resolve()
+    .then(() => window.claude?.use?.('downloads'))
+    .catch(() => null)
+    .then((d) => {
+      previewState = d ? 'available' : 'unavailable';
+      return d || null;
+    });
+  return previewDownloads;
+}
+
+/** 'unknown' while the viewer has not answered, then 'available' or 'unavailable'. */
+export function previewSaveState() {
+  previewSaver();
+  return previewState;
+}
+
+async function previewSave(blob, filename) {
+  const downloads = await previewSaver();
+  if (!downloads) throw new Error('this view cannot save files. Use Copy project instead');
+  let name = filename;
+  let data = blob;
+  if (!PREVIEW_TYPES.test(filename)) {
+    data = zipFiles([{ name: filename, data: new Uint8Array(await blob.arrayBuffer()) }]);
+    name = `${filename}.zip`;
+  }
+  try {
+    await downloads.save({ filename: name, data });
+    return true;
+  } catch (err) {
+    const code = err?.code;
+    if (code === 'declined') return false;
+    if (code === 'rate_limited') throw new Error('another save is still waiting for an answer');
+    if (code === 'too_large') throw new Error('the file is too large to save here');
+    if (code === 'rejected_extension' || code === 'extension_not_enabled') throw new Error('this file type cannot be saved here');
+    throw new Error('this view cannot save files. Use Copy project instead');
+  }
 }
 
 export function exportJSON(app) {
   const doc = app.model.doc;
   const blob = new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' });
-  downloadBlob(blob, `${safeName(doc.name)}.lintel.json`);
+  return downloadBlob(blob, `${safeName(doc.name)}.lintel.json`);
 }
 
 /** Plan image on a white sheet. */
@@ -233,7 +287,7 @@ export function exportDXF(app) {
   }
   add(0, 'ENDSEC', 0, 'EOF');
   const blob = new Blob([L.join('\r\n') + '\r\n'], { type: 'application/dxf' });
-  downloadBlob(blob, `${safeName(app.model.doc.name)}-${safeName(app.level.name)}.dxf`);
+  return downloadBlob(blob, `${safeName(app.model.doc.name)}-${safeName(app.level.name)}.dxf`);
 }
 
 /* ---------- SVG ---------- */
@@ -241,7 +295,7 @@ export function exportDXF(app) {
 export function exportSVG(app) {
   const P = collectPlan(app);
   const bb = app.derived.bounds(app.activeLevel) || app.derived.bounds();
-  if (!bb) return;
+  if (!bb) throw new Error('nothing to export');
   const m = 1500;
   const x0 = bb.minX - m, w = bb.maxX - bb.minX + 2 * m, hh = bb.maxY - bb.minY + 2 * m;
   // SVG's Y axis points down; plans are Y-up.
@@ -285,7 +339,7 @@ export function exportSVG(app) {
   parts.push(`<g font-family="Barlow, Arial, sans-serif" fill="#1d2427" text-anchor="middle">${P.texts.map((t) => `<text x="${X(t.x)}" y="${Y(t.y)}" font-size="${t.size}" dominant-baseline="middle"${t.angle ? ` transform="rotate(${-t.angle} ${X(t.x)} ${Y(t.y)})"` : ''}>${esc(t.text)}</text>`).join('')}</g>`);
   parts.push(`<text x="${(m / 2).toFixed(0)}" y="${(hh - m / 3).toFixed(0)}" font-family="Barlow, Arial, sans-serif" font-size="320" fill="#1d2427">${esc(app.model.doc.name)} · ${esc(app.level.name)} · 1:100</text>`);
   parts.push('</svg>');
-  downloadBlob(new Blob([parts.join('\n')], { type: 'image/svg+xml' }), `${safeName(app.model.doc.name)}-${safeName(app.level.name)}.svg`);
+  return downloadBlob(new Blob([parts.join('\n')], { type: 'image/svg+xml' }), `${safeName(app.model.doc.name)}-${safeName(app.level.name)}.svg`);
 }
 
 /** Read a project file chosen by the user. */

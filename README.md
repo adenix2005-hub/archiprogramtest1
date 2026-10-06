@@ -94,12 +94,15 @@ No build step is needed to run it: `index.html` loads plain ES modules.
 ```sh
 npm install        # dev tools: esbuild and three (only for rebuilding vendor files)
 npm start          # serve at http://localhost:8080
-npm test           # geometry, roof, sketch and model tests (node --test)
+npm test           # geometry, roof, sketch, model and zip tests (node --test)
 npm run lint
 npm run build      # regenerate sw.js (offline cache list) and dist/lintel.html
+npm run build:artifact  # also build dist/artifact.html, a preview page for claude.ai
 ```
 
 After changing app files, run `npm run build` so the offline cache picks up the new version.
+
+The preview page loads three.js from jsDelivr. Inside the claude.ai viewer it saves exports through the viewer, which asks before each file; DXF, GLB and OBJ files are wrapped in a ZIP because the viewer only saves common file types.
 
 ```
 index.html, css/, fonts/, icons/   page, styles, self-hosted fonts, app icons
@@ -108,7 +111,7 @@ js/geom/     wall paths and joins, room detection, straight-skeleton roofs, sket
 js/plan/     2D canvas renderer, snapping, hit testing and the drawing tools
 js/three/    3D model builder, materials (section poché), camera controls, 3D view
 js/ui/       toolbar, panels, dialogs, command line, icons
-js/io/       PNG, SVG, DXF and JSON export
+js/io/       PNG, SVG, DXF and JSON export, ZIP writer
 vendor/      three.js r186 bundle (MIT)
 tests/       node tests
 tools/       build script

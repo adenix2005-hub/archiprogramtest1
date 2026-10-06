@@ -7,7 +7,7 @@ import { newDoc, migrate } from '../core/model.js';
 import { sampleHouse } from '../core/sample.js';
 import { COMMANDS } from '../commands.js';
 import { UNITS } from '../core/units.js';
-import { exportJSON, exportPlanPNG, exportDXF, exportSVG, downloadBlob, readProjectFile, safeName } from '../io/export.js';
+import { exportJSON, exportPlanPNG, exportDXF, exportSVG, downloadBlob, readProjectFile, safeName, previewSaveState } from '../io/export.js';
 
 export class Dialogs {
   constructor(app, host) {
@@ -210,17 +210,13 @@ export class Dialogs {
 
   exportDialog() {
     const app = this.app;
-    // Embedded previews (claude.ai artifacts) cannot save files; copying text still works.
+    // In a claude.ai artifact preview, files are saved through the viewer when it allows it.
     const preview = !!window.__LINTEL_PREVIEW__;
     let entry;
     const run = async (fn, label) => {
-      if (preview) {
-        app.toast('Saving files is blocked in this preview. Use Copy project, or export from the installed app.', 6000);
-        return;
-      }
       try {
-        await fn();
-        app.toast(`${label} exported`);
+        const saved = await fn();
+        app.toast(saved === false ? 'Export cancelled' : `${label} exported`);
       } catch (err) {
         console.error(err);
         app.toast(`Export failed: ${err.message || err}`);
@@ -236,7 +232,7 @@ export class Dialogs {
       item('plan', 'Plan image (PNG)', `${app.level.name} on a white sheet`, async () => {
         const blob = await exportPlanPNG(app);
         if (!blob) throw new Error('nothing to export');
-        downloadBlob(blob, `${name}-${safeName(app.level.name)}.png`);
+        return downloadBlob(blob, `${name}-${safeName(app.level.name)}.png`);
       }),
       item('plan', 'Plan drawing (DXF)', 'Open in AutoCAD, Revit, SketchUp or LibreCAD', () => exportDXF(app)),
       item('plan', 'Plan vector (SVG)', 'Scalable drawing for print or Illustrator', () => exportSVG(app)),
@@ -244,26 +240,28 @@ export class Dialogs {
         const v = await app.ensure3D();
         if (!v) throw new Error('3D is not available');
         const blob = await v.screenshot();
-        downloadBlob(blob, `${name}-3d.png`);
+        return downloadBlob(blob, `${name}-3d.png`);
       }),
       item('cube', '3D model (GLB)', 'For Blender, SketchUp (with importer) or web viewers', async () => {
         const v = await app.ensure3D();
         if (!v) throw new Error('3D is not available');
         const blob = await v.exportGLB();
-        downloadBlob(blob, `${name}.glb`);
+        return downloadBlob(blob, `${name}.glb`);
       }),
       item('cube', '3D model (OBJ)', 'Widely supported mesh format', async () => {
         const v = await app.ensure3D();
         if (!v) throw new Error('3D is not available');
         const blob = v.exportOBJ();
-        downloadBlob(blob, `${name}.obj`);
+        return downloadBlob(blob, `${name}.obj`);
       }),
       item('save', 'Project file (JSON)', 'Full backup you can open here again', () => exportJSON(app)),
       button('copy', 'Copy project', 'As text, to paste into Lintel on another device', () => this.copyProject()),
     );
-    const body = preview
-      ? h('div', { class: 'dlg-stack' }, h('p', { class: 'f-note', text: 'This preview cannot save files. Copy project still works, so you can paste this plan into the installed app.' }), grid)
-      : grid;
+    const previewNote = () =>
+      previewSaveState() === 'unavailable'
+        ? 'This view cannot save files. Copy project still works, so you can paste this plan into the installed app.'
+        : 'Claude asks you to confirm each file before it is saved. DXF, GLB and OBJ files are saved inside a ZIP file.';
+    const body = preview ? h('div', { class: 'dlg-stack' }, h('p', { class: 'f-note', text: previewNote() }), grid) : grid;
     entry = this.open({ title: 'Export', body, wide: true });
     void entry;
   }

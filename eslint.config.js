@@ -16,7 +16,7 @@ export default [
         Node: 'readonly', Event: 'readonly', CustomEvent: 'readonly', XMLSerializer: 'readonly', btoa: 'readonly', atob: 'readonly',
         HTMLCanvasElement: 'readonly', OffscreenCanvas: 'readonly', WebGLRenderingContext: 'readonly', getSelection: 'readonly',
         caches: 'readonly', fetch: 'readonly', location: 'readonly', history: 'readonly',
-        process: 'readonly', TextEncoder: 'readonly', Response: 'readonly', DataView: 'readonly',
+        process: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly', Response: 'readonly', DataView: 'readonly',
       },
     },
     rules: {

@@ -1,5 +1,6 @@
 // Entry point.
 import { App } from './app.js';
+import { previewSaveState } from './io/export.js';
 
 function start() {
   const root = document.getElementById('root');
@@ -18,6 +19,9 @@ function start() {
 }
 
 start();
+
+// In a claude.ai artifact preview, ask the viewer early whether it can save files.
+if (window.__LINTEL_PREVIEW__) previewSaveState();
 
 // Offline support when served over http(s) (not available in embedded previews).
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.__LINTEL_NO_SW__) {
